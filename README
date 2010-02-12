@@ -1,5 +1,7 @@
   youtube to mplayer
 
+    defaults to audio only, -v option to also show video
+
     single search:
 
       yts
@@ -16,9 +18,11 @@
       choose: 0
       search: miley cyrus
       choose: 2
-      search: play
+      search: [play][save]['']
+
+    play from file:
+        yts -f playlist.ytspl
 
     direct play:
       yts -i http://www.youtube.com/watch?v=P0Rccv5dCgc -i 1nfKpiGwRVo
 
-    -v option to also play video

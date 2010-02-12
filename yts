@@ -18,14 +18,23 @@
       choose: 0
       search: miley cyrus
       choose: 2
-      search: play
+      search: [play][save]['']
+
+    play from file:
+        yts -f playlist.ytspl
 
     direct play:
       yts -i http://www.youtube.com/watch?v=P0Rccv5dCgc -i 1nfKpiGwRVo
 '''
 
-import re, urllib, webbrowser
+import os, re, urllib, webbrowser
 import subprocess
+
+try:
+    import readline
+    readline.parse_and_bind('tab: complete')
+except:
+    pass
 
 def directvid(url):
     ''' take a watch url or ID and return a video url '''
@@ -85,14 +94,29 @@ def juke():
         s = raw_input('search: ')
         if s == 'play':
             break
+        elif s == 'save':
+            while True:
+                filename = raw_input('filename: ')
+                if not filename:
+                    return
+                if not filename.endswith('.ytspl'):
+                    filename = '%s.ytspl' % filename
+                if os.path.exists(filename):
+                    print 'file exists!'
+                    continue
+                fh = open(filename, 'w')
+                fh.write(os.linesep.join(vids))
+                fh.write(os.linesep)
+                fh.close()
+                print '%s written.' % filename
+                return
         elif not s:
-            vids = []
-            break
+            return
         else:
             vids.append(choose(search(s)))
         vids = [i for i in vids if i]
-        for vid in vids:
-            mplayer(directvid(vid), opts.video)
+    for vid in vids:
+        mplayer(directvid(vid), opts.video)
 
 def mplayer(url, video):
     if not url:
@@ -113,16 +137,22 @@ if __name__ == '__main__':
     from optparse import OptionParser
 
     parser = OptionParser(usage=__doc__)
+    parser.add_option('-f', '--file',
+                      help='play a list of IDs/URLs from FILE')
     parser.add_option('-i', '--id', action='append',
                       help='directly play an ID or URL')
     parser.add_option('-p', '--playlist', action='store_true', default=False,
-                      help='build up a playlist')
+                      help='build up a playlist to play/save')
     parser.add_option('-v', '--video', action='store_true', default=False,
-                      help='play video too')
+                      help='play video(s) too')
     opts, args = parser.parse_args()
 
     if opts.playlist:
         juke()
+    elif opts.file:
+        if os.path.exists(opts.file):
+           for vid in open(opts.file).readlines():
+               mplayer(directvid(vid.strip()), opts.video)
     elif opts.id:
         for vid in opts.id:
             mplayer(directvid(vid), opts.video)
