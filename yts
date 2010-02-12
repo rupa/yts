@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+'''
+  youtube to mplayer
+
+    single search:
+
+      yts
+      search: roots manuva
+      choose: 2
+
+      yts tom waits
+      choose: 2
+
+    playlist:
+
+      yts -p
+      search: bartok
+      choose: 0
+      search: miley cyrus
+      choose: 2
+      search: play
+
+    direct play:
+      yts -i http://www.youtube.com/watch?v=P0Rccv5dCgc -i 1nfKpiGwRVo
+'''
+
+import re, urllib, webbrowser
+import subprocess
+
+def directvid(url):
+    ''' take a watch url or ID and return a video url '''
+    if not url:
+        return
+    if not url.startswith('http://'):
+        url = 'http://www.youtube.com/watch?v=%s' % url
+    w = urllib.urlopen(url).readlines()
+    fnd = ''
+    for line in w:
+        if '"video_id":' in line and '"t":' in line:
+            line = line.split(',')
+            line = [i for i in line if '"t":' in i or '"video_id"' in i]
+            line = [i.strip().split('"') for i in line]
+            line = ['%s=%s' % (i[1], i[3]) for i in line]
+            fnd = 'http://youtube.com/get_video.php?%s' % '&'.join(line)
+            break
+    return fnd
+
+def search(s):
+    if not s:
+        return
+    print s
+    url = 'http://www.youtube.com/results?search_query=%s'
+    res = urllib.urlopen(url % urllib.quote_plus(s)).readlines()
+    k = []
+    for line in res:
+        if 'href="/watch?' in line:
+            attrs = re.findall('[a-z]+=\"[^\"]*\"', line)
+            ass = [i.split("=",1) for i in attrs]
+            j = {}
+            for i in ass:
+                j[i[0]] = i[1][1:-1]
+            try:
+                n = (j['title'], 'http://youtube.com%s' % j['href'])
+            except:
+                pass
+            if n not in k:
+                k.append(n)
+    return k
+
+def choose(k):
+    if not k:
+        return False
+    for i, j in enumerate(k):
+        print '%3s\t%s' % (i, j[0])
+    try:
+        n = k[int(raw_input('choose: '))]
+    except:
+        return False
+    print n[1]
+    return n[1]
+
+def juke():
+    vids = []
+    while True:
+        s = raw_input('search: ')
+        if s == 'play':
+            break
+        elif not s:
+            vids = []
+            break
+        else:
+            vids.append(choose(search(s)))
+        vids = [i for i in vids if i]
+        for vid in vids:
+            mplayer(directvid(vid), opts.video)
+
+def mplayer(url, video):
+    if not url:
+        return
+    print url
+    cmd = ['mplayer', '-nolirc', '-prefer-ipv4', '-idx', '-quiet']
+    if not video:
+        cmd += ['-vo', 'null']
+    try:
+        p = subprocess.Popen(cmd + [url], stdout=subprocess.PIPE)
+        p.wait()
+    except:
+        return
+    return True
+
+if __name__ == '__main__':
+    import sys
+    from optparse import OptionParser
+
+    parser = OptionParser(usage=__doc__)
+    parser.add_option('-i', '--id', action='append',
+                      help='directly play an ID or URL')
+    parser.add_option('-p', '--playlist', action='store_true', default=False,
+                      help='build up a playlist')
+    parser.add_option('-v', '--video', action='store_true', default=False,
+                      help='play video too')
+    opts, args = parser.parse_args()
+
+    if opts.playlist:
+        juke()
+    elif opts.id:
+        for vid in opts.id:
+            mplayer(directvid(vid), opts.video)
+    else:
+        if args:
+            s = ' '.join(args)
+        else:
+            s = raw_input('search: ')
+        if s:
+            ls = search(s)
+            while True:
+                vid = choose(ls)
+                if not vid:
+                    break
+                mplayer(directvid(vid), opts.video)

@@ -1,0 +1,24 @@
+  youtube to mplayer
+
+    single search:
+
+      yts
+      search: roots manuva
+      choose: 2
+
+      yts tom waits
+      choose: 2
+
+    playlist:
+
+      yts -p
+      search: bartok
+      choose: 0
+      search: miley cyrus
+      choose: 2
+      search: play
+
+    direct play:
+      yts -i http://www.youtube.com/watch?v=P0Rccv5dCgc -i 1nfKpiGwRVo
+
+    -v option to also play video
