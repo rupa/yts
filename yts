@@ -33,6 +33,7 @@ import subprocess
 try:
     import readline
     readline.parse_and_bind('tab: complete')
+    readline.set_completer_delims('')
 except:
     pass
 
@@ -100,6 +101,9 @@ def juke():
                 if not filename:
                     return
                 if not filename.endswith('.ytspl'):
+                    if not os.path.basename(filename):
+                        print 'no file name!'
+                        continue
                     filename = '%s.ytspl' % filename
                 if os.path.exists(filename):
                     print 'file exists!'
