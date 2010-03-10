@@ -13,7 +13,7 @@
        ! - Command mode. Pass commands directly to mplayer.
       :w - Write playlist file suitable for use with -f to playlist.yt.
       :q - Quit.
-     :wq - Write playist and quit.
+     :wq - Write playlist and quit.
 
   Choose prompt:
     Space delimit multiple choices.
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     parser.add_option('-i', '--id', action='append',
                       help='directly play an ID or URL')
     parser.add_option('-v', '--video', action='store_true', default=False,
-                      help='play video(s) too')
+                      help='play video too (default is audio only)')
     opts, args = parser.parse_args()
 
     m = Mplayer(opts.video)

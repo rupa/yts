@@ -12,7 +12,7 @@ Usage:
        ! - Command mode. Pass commands directly to mplayer.
       :w - Write playlist file suitable for use with -f to playlist.yt.
       :q - Quit.
-     :wq - Write playist and quit.
+     :wq - Write playlist and quit.
 
   Choose prompt:
     Space delimit multiple choices.
@@ -22,4 +22,4 @@ Options:
   -h, --help            show this help message and exit
   -f FILE, --file=FILE  play a list of IDs/URLs from FILE
   -i ID, --id=ID        directly play an ID or URL
-  -v, --video           play video(s) too
+  -v, --video           play video too (default is audio only)
