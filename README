@@ -1,28 +1,25 @@
-  youtube to mplayer
+Usage: 
+  yts [-v] [-f FILE] [-i ID/URL] [SEARCH TERMS]
 
-    defaults to audio only, -v option to also show video
+  A youtube jukebox. Because most every tune is on youtube. Prompts for search,
+  pick from a list of choices. Repeat.
 
-    single search:
+  Search prompt:
+    Mode shown in [] in prompt.
+    Special commands:
+       + - Append mode. New choices are appended to a playlist (default).
+       - - Play mode. New choices play immediately and override pending choices.
+       ! - Command mode. Pass commands directly to mplayer.
+      :w - Write playlist file suitable for use with -f to playlist.yt.
+      :q - Quit.
+     :wq - Write playist and quit.
 
-      yts
-      search: roots manuva
-      choose: 2
+  Choose prompt:
+    Space delimit multiple choices.
 
-      yts tom waits
-      choose: 2
 
-    playlist:
-
-      yts -p
-      search: bartok
-      choose: 0
-      search: miley cyrus
-      choose: 2
-      search: [play][save]['']
-
-    play from file:
-        yts -f playlist.ytspl
-
-    direct play:
-      yts -i http://www.youtube.com/watch?v=P0Rccv5dCgc -i 1nfKpiGwRVo
-
+Options:
+  -h, --help            show this help message and exit
+  -f FILE, --file=FILE  play a list of IDs/URLs from FILE
+  -i ID, --id=ID        directly play an ID or URL
+  -v, --video           play video(s) too

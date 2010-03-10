@@ -1,33 +1,25 @@
 #!/usr/bin/env python
 '''
-  youtube to mplayer
+  %prog [-v] [-f FILE] [-i ID/URL] [SEARCH TERMS]
 
-    single search:
+  A youtube jukebox. Because most every tune is on youtube. Prompts for search,
+  pick from a list of choices. Repeat.
 
-      yts
-      search: roots manuva
-      choose: 2
+  Search prompt:
+    Mode shown in [] in prompt.
+    Special commands:
+       + - Append mode. New choices are appended to a playlist (default).
+       - - Play mode. New choices play immediately and override pending choices.
+       ! - Command mode. Pass commands directly to mplayer.
+      :w - Write playlist file suitable for use with -f to playlist.yt.
+      :q - Quit.
+     :wq - Write playist and quit.
 
-      yts tom waits
-      choose: 2
-
-    playlist:
-
-      yts -p
-      search: bartok
-      choose: 0
-      search: miley cyrus
-      choose: 2
-      search: [play][save]['']
-
-    play from file:
-        yts -f playlist.ytspl
-
-    direct play:
-      yts -i http://www.youtube.com/watch?v=P0Rccv5dCgc -i 1nfKpiGwRVo
+  Choose prompt:
+    Space delimit multiple choices.
 '''
 
-import os, re, urllib, webbrowser
+import htmllib, os, re, urllib
 from subprocess import Popen, PIPE
 
 try:
@@ -37,10 +29,13 @@ try:
 except:
     pass
 
+log = []
+
 def directvid(url):
     ''' take a watch url or ID and return a video url '''
     if not url:
         return
+    log.append(url)
     if not url.startswith('http://'):
         url = 'http://www.youtube.com/watch?v=%s' % url
     w = urllib.urlopen(url).readlines()
@@ -57,10 +52,16 @@ def directvid(url):
 
 def search(srch):
     ''' given a search string, return a list of tuples (title, url) '''
+    def unescape(s):
+        p = htmllib.HTMLParser(None)
+        p.save_bgn()
+        p.feed(s)
+        return p.save_end()
     if not srch:
         return
     print srch
     url = 'http://www.youtube.com/results?search_query=%s'
+    vidurl = 'http://www.youtube.com%s'
     res = urllib.urlopen(url % urllib.quote_plus(srch)).readlines()
     vids = []
     for line in res:
@@ -71,74 +72,99 @@ def search(srch):
             for i in attrs:
                 d[i[0]] = i[1][1:-1]
             try:
-                vid = (d['title'], 'http://www.youtube.com%s' % d['href'])
+                # dunno why it's escaped twice
+                vid = (unescape(unescape(d['title'])), vidurl % d['href'])
             except:
                 pass
             if vid not in vids:
                 vids.append(vid)
     return vids
 
-def choose(k):
-    if not k:
+def choose(items):
+    ''' pick item(s) by description out of a list of (description, item) '''
+    if not items:
         return False
-    for i, j in enumerate(k):
-        print '%3s\t%s' % (i, j[0])
-    try:
-        n = k[int(raw_input('choose: '))]
-    except:
-        return False
-    print n[1]
-    return n[1]
+    for i, item in enumerate(items):
+        print '%3s\t%s' % (i, item[0])
+    r = raw_input('choose: ').split(' ')
+    choices = []
+    for i in r:
+        try:
+            choices.append(items[int(i)][1])
+        except:
+            pass
+    for choice in choices:
+        print choice
+    return choices
 
-def juke():
-    vids = []
+def juke(m):
+    thing = m.add
+    flag = '+'
     while True:
-        s = raw_input('search: ')
-        if s == 'play':
+        cmd = raw_input('search[%s] ' % flag)
+        if cmd == ':q':
             break
-        elif s == 'save':
-            while True:
-                filename = raw_input('filename: ')
-                if not filename:
-                    return
-                if not filename.endswith('.ytspl'):
-                    if not os.path.basename(filename):
-                        print 'no file name!'
-                        continue
-                    filename = '%s.ytspl' % filename
-                if os.path.exists(filename):
-                    print 'file exists!'
-                    continue
-                fh = open(filename, 'w')
-                fh.write(os.linesep.join(vids))
-                fh.write(os.linesep)
-                fh.close()
-                print '%s written.' % filename
-                return
-        elif not s:
-            return
-        else:
-            vids.append(choose(search(s)))
-        vids = [i for i in vids if i]
-    for vid in vids:
-        mplayer(directvid(vid), opts.video)
+        if cmd == ':w' or cmd == ':wq':
+            fh = open('playlist.yt', 'w')
+            fh.write('%s\n' % os.linesep.join(log))
+            fh.close()
+            print 'playlist written to playlist.yt'
+            if cmd == ':wq':
+                break
+            continue
+        if cmd == '+':
+            thing = m.add
+            flag = '+'
+            continue
+        if cmd == '-':
+            thing = m.load
+            flag = '-'
+            continue
+        if cmd == '!':
+            flag = '!'
+            continue
+        if flag == '!':
+            if not m.command(cmd):
+                break
+            continue
+        vids = choose(search(cmd))
+        if not vids:
+            continue
+        for vid in vids:
+            if not thing(directvid(vid)):
+                break
 
-def mplayer(url, video):
-    if not url:
-        return
-    print url
-    cmd = ['mplayer', '-nolirc', '-prefer-ipv4', '-idx', '-quiet']
-    if not video:
-        cmd += ['-vo', 'null']
-    try:
-        p = Popen(cmd + [url], stdout=PIPE, stderr=PIPE)
-        p.wait()
-    except:
-        pass
-    return True
+class Mplayer(object):
+    ''' a wrapper around mplayer we can pass commands to '''
+
+    def __init__(self, video=False):
+        cmd = ['mplayer', '-slave', '-idle', '-quiet']
+        if not video:
+            cmd += ['-vo', 'null']
+        self.player = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=1)
+        self.log = []
+
+    def command(self, cmd):
+        if self.player.poll() is not None:
+            print 'mplayer process lost, exiting'
+            return False
+        self.player.stdin.write('%s\n' % cmd)
+        self.log.append(cmd)
+        return True
+
+    def load(self, vid):
+        return self.command('loadfile "%s"' % vid)
+
+    def add(self, vid):
+        return self.command('loadfile "%s" 1' % vid)
+
+    def __del__(self):
+        try:
+            self.player.stdin.write('quit\n')
+        except IOError:
+            pass
 
 if __name__ == '__main__':
-    import sys
     from optparse import OptionParser
 
     parser = OptionParser(usage=__doc__)
@@ -146,30 +172,27 @@ if __name__ == '__main__':
                       help='play a list of IDs/URLs from FILE')
     parser.add_option('-i', '--id', action='append',
                       help='directly play an ID or URL')
-    parser.add_option('-p', '--playlist', action='store_true', default=False,
-                      help='build up a playlist to play/save')
     parser.add_option('-v', '--video', action='store_true', default=False,
                       help='play video(s) too')
     opts, args = parser.parse_args()
 
-    if opts.playlist:
-        juke()
-    elif opts.file:
-        if os.path.exists(opts.file):
-           for vid in open(opts.file).readlines():
-               mplayer(directvid(vid.strip()), opts.video)
-    elif opts.id:
+    m = Mplayer(opts.video)
+
+    if opts.file and os.path.exists(opts.file):
+        for vid in open(opts.file).readlines():
+            m.add(directvid(vid))
+    if opts.id:
         for vid in opts.id:
-            mplayer(directvid(vid), opts.video)
-    else:
-        if args:
-            s = ' '.join(args)
-        else:
-            s = raw_input('search: ')
-        if s:
-            ls = search(s)
-            while True:
-                vid = choose(ls)
-                if not vid:
-                    break
-                mplayer(directvid(vid), opts.video)
+            m.add(directvid(vid))
+    if args:
+        vids = choose(search(' '.join(args)))
+        if vids:
+            for vid in vids:
+                m.add(directvid(vid))
+    try:
+        juke(m)
+    except KeyboardInterrupt:
+        print
+
+    for item in log:
+        print item
