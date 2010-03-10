@@ -28,7 +28,7 @@
 '''
 
 import os, re, urllib, webbrowser
-import subprocess
+from subprocess import Popen, PIPE
 
 try:
     import readline
@@ -55,27 +55,28 @@ def directvid(url):
             break
     return fnd
 
-def search(s):
-    if not s:
+def search(srch):
+    ''' given a search string, return a list of tuples (title, url) '''
+    if not srch:
         return
-    print s
+    print srch
     url = 'http://www.youtube.com/results?search_query=%s'
-    res = urllib.urlopen(url % urllib.quote_plus(s)).readlines()
-    k = []
+    res = urllib.urlopen(url % urllib.quote_plus(srch)).readlines()
+    vids = []
     for line in res:
         if 'href="/watch?' in line:
             attrs = re.findall('[a-z]+=\"[^\"]*\"', line)
-            ass = [i.split("=",1) for i in attrs]
-            j = {}
-            for i in ass:
-                j[i[0]] = i[1][1:-1]
+            attrs = [i.split("=",1) for i in attrs]
+            d = {}
+            for i in attrs:
+                d[i[0]] = i[1][1:-1]
             try:
-                n = (j['title'], 'http://youtube.com%s' % j['href'])
+                vid = (d['title'], 'http://www.youtube.com%s' % d['href'])
             except:
                 pass
-            if n not in k:
-                k.append(n)
-    return k
+            if vid not in vids:
+                vids.append(vid)
+    return vids
 
 def choose(k):
     if not k:
@@ -130,10 +131,10 @@ def mplayer(url, video):
     if not video:
         cmd += ['-vo', 'null']
     try:
-        p = subprocess.Popen(cmd + [url], stdout=subprocess.PIPE)
+        p = Popen(cmd + [url], stdout=PIPE, stderr=PIPE)
         p.wait()
     except:
-        return
+        pass
     return True
 
 if __name__ == '__main__':
