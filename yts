@@ -86,7 +86,7 @@ def choose(items):
         return False
     for i, item in enumerate(items):
         print '%3s\t%s' % (i, item[0])
-    r = raw_input('choose: ').split(' ')
+    r = raw_input(' choose: ').split(' ')
     choices = []
     for i in r:
         try:
@@ -101,7 +101,7 @@ def juke(m):
     thing = m.add
     flag = '+'
     while True:
-        cmd = raw_input('search[%s] ' % flag)
+        cmd = raw_input(' search[%s] ' % flag)
         if cmd == ':q':
             break
         if cmd == ':w' or cmd == ':wq':
@@ -137,11 +137,17 @@ def juke(m):
 class Mplayer(object):
     ''' a wrapper around mplayer we can pass commands to '''
 
-    def __init__(self, video=False):
+    def __init__(self, video=False, fifo=False):
+        self.fifo = fifo
         cmd = ['mplayer', '-slave', '-idle', '-quiet']
         if not video:
             cmd += ['-vo', 'null']
-        self.player = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=1)
+        if self.fifo:
+            os.mkfifo('yts.fifo')
+            stdin = open('yts.fifo', 'r+')
+        else:
+            stdin = PIPE
+        self.player = Popen(cmd, stdin=stdin, stdout=PIPE, stderr=PIPE, bufsize=1)
         self.log = []
 
     def command(self, cmd):
@@ -163,6 +169,8 @@ class Mplayer(object):
             self.player.stdin.write('quit\n')
         except IOError:
             pass
+        if self.fifo:
+            os.unlink('yts.fifo')
 
 if __name__ == '__main__':
     from optparse import OptionParser
@@ -172,11 +180,13 @@ if __name__ == '__main__':
                       help='play a list of IDs/URLs from FILE')
     parser.add_option('-i', '--id', action='append',
                       help='directly play an ID or URL')
+    parser.add_option('-p', '--pipe', action='store_true', default=False,
+                      help='get commands from a pipe.')
     parser.add_option('-v', '--video', action='store_true', default=False,
                       help='play video too (default is audio only)')
     opts, args = parser.parse_args()
 
-    m = Mplayer(opts.video)
+    m = Mplayer(opts.video, opts.pipe)
 
     if opts.file and os.path.exists(opts.file):
         for vid in open(opts.file).readlines():
