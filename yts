@@ -40,6 +40,17 @@ def directvid(url):
         url = 'http://www.youtube.com/watch?v=%s' % url
     w = urllib.urlopen(url).readlines()
     fnd = ''
+
+    for line in w:
+        if 'video_id=' in line:
+            line = line.split('&')
+            line = list(set([i for i in line if i.startswith('t=')
+                             or i.startswith('video_id=')]))
+            fnd = 'http://youtube.com/get_video.php?%s' % '&'.join(line)
+    print fnd
+    return fnd
+
+    # stopped working
     for line in w:
         if '"video_id":' in line and '"t":' in line:
             line = line.split(',')
@@ -48,6 +59,7 @@ def directvid(url):
             line = ['%s=%s' % (i[1], i[3]) for i in line]
             fnd = 'http://youtube.com/get_video.php?%s' % '&'.join(line)
             break
+    print fnd
     return fnd
 
 def search(srch):
