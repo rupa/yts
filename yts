@@ -39,7 +39,7 @@ def directvid(url):
     if not url.startswith('http://'):
         url = 'http://www.youtube.com/watch?v=%s' % url
     w = urllib.urlopen(url).readlines()
-    t, video_id = '', ''
+    t, video_id, q = '', '', ''
 
     for line in w:
         if 'PLAYER_CONFIG' in line:
@@ -49,9 +49,12 @@ def directvid(url):
                     t = i.split('"')[3]
                 if i.strip().startswith('"video_id":'):
                     video_id = i.split('"')[3]
-    if t and video_id:
-        fmt = 'http://www.youtube.com/get_video?t=%s&video_id=%s&fmt=22&asv=2'
-        fnd = fmt % (t, video_id)
+                if i.strip().startswith('"fmt_list":'):
+                    q = i.split('"')[3]
+                    q = q.split('\/')[0]
+    if t and video_id and q:
+        fmt = 'http://www.youtube.com/get_video?t=%s&video_id=%s&fmt=%s&asv=2'
+        fnd = fmt % (t, video_id, q)
         print fnd
         return fnd
 
