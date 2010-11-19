@@ -39,28 +39,21 @@ def directvid(url):
     if not url.startswith('http://'):
         url = 'http://www.youtube.com/watch?v=%s' % url
     w = urllib.urlopen(url).readlines()
-    fnd = ''
+    t, video_id = '', ''
 
     for line in w:
-        if 'video_id=' in line:
-            line = line.split('&')
-            line = list(set([i for i in line if i.startswith('t=')
-                             or i.startswith('video_id=')]))
-            fnd = 'http://youtube.com/get_video.php?%s' % '&'.join(line)
-    print fnd
-    return fnd
-
-    # stopped working
-    for line in w:
-        if '"video_id":' in line and '"t":' in line:
+        if 'PLAYER_CONFIG' in line:
             line = line.split(',')
-            line = [i for i in line if '"t":' in i or '"video_id"' in i]
-            line = [i.strip().split('"') for i in line]
-            line = ['%s=%s' % (i[1], i[3]) for i in line]
-            fnd = 'http://youtube.com/get_video.php?%s' % '&'.join(line)
-            break
-    print fnd
-    return fnd
+            for i in line:
+                if i.strip().startswith('"t":'):
+                    t = i.split('"')[3]
+                if i.strip().startswith('"video_id":'):
+                    video_id = i.split('"')[3]
+    if t and video_id:
+        fmt = 'http://www.youtube.com/get_video?t=%s&video_id=%s&fmt=22&asv=2'
+        fnd = fmt % (t, video_id)
+        print fnd
+        return fnd
 
 def search(srch):
     ''' given a search string, return a list of tuples (title, url) '''
@@ -163,6 +156,7 @@ class Mplayer(object):
         self.log = []
 
     def command(self, cmd):
+        # pass in a generic command
         if self.player.poll() is not None:
             print 'mplayer process lost, exiting'
             return False
@@ -171,9 +165,11 @@ class Mplayer(object):
         return True
 
     def load(self, vid):
+        # load a new file
         return self.command('loadfile "%s"' % vid)
 
     def add(self, vid):
+        # as a new file to the queue
         return self.command('loadfile "%s" 1' % vid)
 
     def __del__(self):
